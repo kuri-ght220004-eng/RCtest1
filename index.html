@@ -1,44 +1,123 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Complex RC Controller</title>
+    <meta charset="utf-8">
+    <title>RC카 복소수 조종기</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: 'Malgun Gothic', sans-serif;
+            margin-top: 50px;
+            background-color: #f5f7fa;
+        }
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-connect {
+            padding: 12px 24px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+        }
+        .btn-connect:hover {
+            background-color: #45a049;
+        }
+        .btn-cmd {
+            font-size: 22px;
+            padding: 15px;
+            width: 220px;
+            background-color: #008CBA;
+            color: white;
+        }
+        .btn-cmd:hover {
+            background-color: #007bc0;
+        }
+        #status {
+            font-size: 15px;
+            color: #555;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .container {
+            margin-top: 30px;
+        }
+    </style>
 </head>
 <body>
 
-<button onclick="connect()">연결</button>
-<button onclick="send('I')">×i</button>
-<button onclick="send('N')">×(-i)</button>
-<button onclick="send('B')">×(-1)</button>
-<button onclick="send('F')">전진</button>
+    <h2>🚀 복소수 마퀸 RC카 조종기</h2>
+    <p>수학적 일차변환(복소수 곱셈)을 이용해 로봇의 방향을 제어합니다.</p>
+    <br>
+    
+    <button class="btn-connect" onclick="connectBluetooth()">1. RC카 블루투스 연결하기</button>
+    <p id="status">연결 상태: 끊어짐</p>
+    
+    <hr style="width: 50%; margin: 30px auto; border: 0; height: 1px; background: #ccc;">
+    
+    <div class="container">
+        <button class="btn-cmd" onclick="sendCmd('1')">전진 ( × 1 )</button><br><br>
+        <button class="btn-cmd" onclick="sendCmd('i')">좌회전 ( × i )</button>
+        <button class="btn-cmd" onclick="sendCmd('-i')">우회전 ( × -i )</button><br><br>
+        <button class="btn-cmd" onclick="sendCmd('-1')">유턴 ( × -1 )</button>
+    </div>
 
-<script>
-let characteristic;
+    <script>
+        let rxCharacteristic; // 마이크로비트 수신 통로(노트북 기준 쓰기 통로) 변수
 
-async function connect() {
-  const device = await navigator.bluetooth.requestDevice({
-    filters: [{ namePrefix: "BBC micro:bit" }],
-    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
-  });
+        // 블루투스 연결 함수
+        async function connectBluetooth() {
+            try {
+                // 1. BBC micro:bit 이름을 가진 기기 및 UART 서비스 필터링
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'BBC micro:bit' }],
+                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] // 마이크로비트 UART 서비스 기본 UUID
+                });
+                
+                document.getElementById('status').innerText = '연결 중...';
+                document.getElementById('status').style.color = '#ff9800';
+                
+                // 2. GATT 서버 연결
+                const server = await device.gatt.connect();
+                
+                // 3. 서비스 가져오기
+                const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+                
+                // 4. 수신(RX) 특성 가져오기 (끝자리를 0003으로 변경하여 쓰기 권한 획득)
+                rxCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
+                
+                document.getElementById('status').innerText = '연결 완료! 조종을 시작하세요.';
+                document.getElementById('status').style.color = '#4CAF50';
+            } catch (error) {
+                console.error(error);
+                alert('연결 실패: ' + error);
+                document.getElementById('status').innerText = '연결 실패';
+                document.getElementById('status').style.color = '#f44336';
+            }
+        }
 
-  const server = await device.gatt.connect();
-
-  const service = await server.getPrimaryService(
-    '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
-  );
-
-  characteristic = await service.getCharacteristic(
-    '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
-  );
-
-  alert("연결 완료");
-}
-
-async function send(text) {
-  const encoder = new TextEncoder();
-  await characteristic.writeValue(encoder.encode(text));
-}
-</script>
-
+        // 마이크로비트로 명령어 문자열을 전송하는 함수
+        async function sendCmd(command) {
+            if (!rxCharacteristic) {
+                alert("먼저 블루투스를 연결해주세요!");
+                return;
+            }
+            try {
+                let encoder = new TextEncoder();
+                // 문자열 뒤에 줄바꿈(\n)을 붙여 마이크로비트가 명령어의 끝을 인식하게 함
+                // writeValueWithoutResponse를 사용하여 권한 에러 방지
+                await rxCharacteristic.writeValueWithoutResponse(encoder.encode(command + "\n"));
+            } catch (error) {
+                console.error('명령 전송 에러:', error);
+                alert('명령 전송 실패: ' + error);
+            }
+        }
+    </script>
 </body>
 </html>
