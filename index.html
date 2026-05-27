@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>micro:bit RC카 리모컨</title>
+
+<style>
+
+body{
+    margin:0;
+    background:#f4f6f8;
+    font-family:Arial, sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+}
+
+h1{
+    margin-bottom:10px;
+}
+
+#status{
+    margin-bottom:20px;
+    font-size:18px;
+}
+
+.controller{
+    display:grid;
+    grid-template-columns:100px 100px 100px;
+    grid-template-rows:100px 100px 100px;
+    gap:12px;
+}
+
+button{
+    font-size:28px;
+    border:none;
+    border-radius:20px;
+    background:white;
+    box-shadow:0 4px 10px rgba(0,0,0,0.15);
+    cursor:pointer;
+    transition:0.15s;
+}
+
+button:hover{
+    transform:scale(1.05);
+}
+
+button:active{
+    transform:scale(0.95);
+}
+
+.connect{
+    margin-bottom:25px;
+    padding:15px 30px;
+    font-size:20px;
+    background:#4caf50;
+    color:white;
+}
+
+.stop{
+    background:#ff5252;
+    color:white;
+}
+
+.forward{
+    background:#42a5f5;
+    color:white;
+}
+
+.backward{
+    background:#66bb6a;
+    color:white;
+}
+
+.left{
+    background:#ffb300;
+    color:white;
+}
+
+.right{
+    background:#ab47bc;
+    color:white;
+}
+
+.empty{
+    visibility:hidden;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🚗 micro:bit RC카 리모컨</h1>
+
+<div id="status">
+연결되지 않음
+</div>
+
+<button class="connect" onclick="connectBluetooth()">
+블루투스 연결
+</button>
+
+<div class="controller">
+
+<div class="empty"></div>
+
+<button class="forward"
+        onmousedown="sendCommand('F')"
+        ontouchstart="sendCommand('F')">
+↑
+</button>
+
+<div class="empty"></div>
+
+<button class="left"
+        onmousedown="sendCommand('L')"
+        ontouchstart="sendCommand('L')">
+←
+</button>
+
+<button class="stop"
+        onmousedown="sendCommand('S')"
+        ontouchstart="sendCommand('S')">
+■
+</button>
+
+<button class="right"
+        onmousedown="sendCommand('R')"
+        ontouchstart="sendCommand('R')">
+→
+</button>
+
+<div class="empty"></div>
+
+<button class="backward"
+        onmousedown="sendCommand('B')"
+        ontouchstart="sendCommand('B')">
+↓
+</button>
+
+<div class="empty"></div>
+
+</div>
+
+<script>
+
+let uartCharacteristic
+
+async function connectBluetooth(){
+
+    try{
+
+        const device = await navigator.bluetooth.requestDevice({
+
+            filters:[
+                { namePrefix:'BBC micro:bit' }
+            ],
+
+            optionalServices:[
+                '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+            ]
+
+        })
+
+        document.getElementById("status").innerText =
+            "micro:bit 연결 중..."
+
+        const server = await device.gatt.connect()
+
+        const service = await server.getPrimaryService(
+            '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+        )
+
+        uartCharacteristic =
+            await service.getCharacteristic(
+                '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
+            )
+
+        document.getElementById("status").innerText =
+            "✅ 연결 완료!"
+
+    }catch(error){
+
+        console.log(error)
+
+        document.getElementById("status").innerText =
+            "❌ 연결 실패"
+
+    }
+
+}
+
+async function sendCommand(cmd){
+
+    if(!uartCharacteristic){
+        alert("먼저 블루투스를 연결하세요!")
+        return
+    }
+
+    const encoder = new TextEncoder()
+
+    await uartCharacteristic.writeValue(
+        encoder.encode(cmd + "\n")
+    )
+
+    console.log("보낸 명령:", cmd)
+
+}
+
+</script>
+
+</body>
+</html>
