@@ -1,22 +1,30 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
 <title>micro:bit RC카 리모컨</title>
 
 <style>
 
 body{
+
     margin:0;
-    background:#f4f6f8;
-    font-family:Arial, sans-serif;
+    height:100vh;
+
     display:flex;
     flex-direction:column;
-    align-items:center;
     justify-content:center;
-    height:100vh;
+    align-items:center;
+
+    background:#f2f4f7;
+
+    font-family:sans-serif;
 }
 
 h1{
@@ -25,122 +33,120 @@ h1{
 
 #status{
     margin-bottom:20px;
-    font-size:18px;
+    font-size:20px;
 }
 
-.controller{
+.connect{
+
+    width:220px;
+    height:60px;
+
+    font-size:22px;
+
+    border:none;
+    border-radius:15px;
+
+    background:#4caf50;
+    color:white;
+
+    margin-bottom:30px;
+
+    cursor:pointer;
+}
+
+.grid{
+
     display:grid;
+
     grid-template-columns:100px 100px 100px;
     grid-template-rows:100px 100px 100px;
+
     gap:12px;
 }
 
 button{
-    font-size:28px;
+
     border:none;
+
     border-radius:20px;
-    background:white;
-    box-shadow:0 4px 10px rgba(0,0,0,0.15);
+
+    font-size:35px;
+
     cursor:pointer;
-    transition:0.15s;
+
+    box-shadow:0 4px 10px rgba(0,0,0,0.2);
 }
 
-button:hover{
-    transform:scale(1.05);
-}
-
-button:active{
-    transform:scale(0.95);
-}
-
-.connect{
-    margin-bottom:25px;
-    padding:15px 30px;
-    font-size:20px;
-    background:#4caf50;
-    color:white;
-}
-
-.stop{
-    background:#ff5252;
-    color:white;
-}
-
-.forward{
-    background:#42a5f5;
-    color:white;
-}
-
-.backward{
-    background:#66bb6a;
-    color:white;
-}
-
-.left{
-    background:#ffb300;
-    color:white;
-}
-
-.right{
-    background:#ab47bc;
-    color:white;
-}
+.forward{ background:#42a5f5; color:white; }
+.backward{ background:#66bb6a; color:white; }
+.left{ background:#ffb300; color:white; }
+.right{ background:#ab47bc; color:white; }
+.stop{ background:#ef5350; color:white; }
 
 .empty{
     visibility:hidden;
 }
 
 </style>
+
 </head>
 
 <body>
 
-<h1>🚗 micro:bit RC카 리모컨</h1>
+<h1>🚗 RC카 리모컨</h1>
 
 <div id="status">
 연결되지 않음
 </div>
 
-<button class="connect" onclick="connectBluetooth()">
+<button class="connect"
+        onclick="connectBluetooth()">
+
 블루투스 연결
+
 </button>
 
-<div class="controller">
+<div class="grid">
 
 <div class="empty"></div>
 
 <button class="forward"
-        onmousedown="sendCommand('F')"
-        ontouchstart="sendCommand('F')">
+        onclick="sendCommand('F')">
+
 ↑
+
 </button>
 
 <div class="empty"></div>
 
 <button class="left"
-        onmousedown="sendCommand('L')"
-        ontouchstart="sendCommand('L')">
+        onclick="sendCommand('L')">
+
 ←
+
 </button>
 
 <button class="stop"
-        onmousedown="sendCommand('S')"
-        ontouchstart="sendCommand('S')">
+        onclick="sendCommand('S')">
+
 ■
+
 </button>
 
 <button class="right"
-        onmousedown="sendCommand('R')"
-        ontouchstart="sendCommand('R')">
+        onclick="sendCommand('R')">
+
 →
+
 </button>
 
 <div class="empty"></div>
 
 <button class="backward"
-        onmousedown="sendCommand('B')"
-        ontouchstart="sendCommand('B')">
+        onclick="sendCommand('B')">
+
 ↓
+
 </button>
 
 <div class="empty"></div>
@@ -155,11 +161,13 @@ async function connectBluetooth(){
 
     try{
 
-        const device = await navigator.bluetooth.requestDevice({
+        document.getElementById("status")
+        .innerText = "연결 중..."
 
-            filters:[
-                { namePrefix:'BBC micro:bit' }
-            ],
+        const device =
+            await navigator.bluetooth.requestDevice({
+
+            acceptAllDevices:true,
 
             optionalServices:[
                 '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
@@ -167,29 +175,34 @@ async function connectBluetooth(){
 
         })
 
-        document.getElementById("status").innerText =
-            "micro:bit 연결 중..."
+        const server =
+            await device.gatt.connect()
 
-        const server = await device.gatt.connect()
-
-        const service = await server.getPrimaryService(
-            '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+        await new Promise(resolve =>
+            setTimeout(resolve, 1000)
         )
+
+        const service =
+            await server.getPrimaryService(
+                '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+            )
 
         uartCharacteristic =
             await service.getCharacteristic(
                 '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
             )
 
-        document.getElementById("status").innerText =
-            "✅ 연결 완료!"
+        document.getElementById("status")
+        .innerText = "✅ 연결 성공"
 
-    }catch(error){
+    }
+
+    catch(error){
 
         console.log(error)
 
-        document.getElementById("status").innerText =
-            "❌ 연결 실패"
+        document.getElementById("status")
+        .innerText = "❌ 연결 실패"
 
     }
 
@@ -198,7 +211,9 @@ async function connectBluetooth(){
 async function sendCommand(cmd){
 
     if(!uartCharacteristic){
+
         alert("먼저 블루투스를 연결하세요!")
+
         return
     }
 
